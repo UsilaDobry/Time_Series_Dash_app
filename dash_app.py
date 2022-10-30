@@ -7,14 +7,15 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc, Dash, dash_table, State
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
-import os
+from dash_bootstrap_templates import ThemeChangerAIO, ThemeSwitchAIO
+
 
 app = Dash(name=__name__, external_stylesheets=[dbc.themes.SOLAR])
 server = app.server
 app.scripts.config.serve_locally = True
 app.css.config.serve_locally = True
 
-#-----------------------------------------------------КОМПОНЕНТЫ--------------------------------------------------------
+
 #-------------------------------------------------------HEADER----------------------------------------------------------
 logo = html.Img(src=app.get_asset_url('./Logo_Yandex/ya_praktikum_2.jpg'), style={'width': "200px", 'height': "100x"},
                 className='inline-image')
@@ -66,10 +67,26 @@ resampling = html.Div(
 decomposition = html.Div(
     [
         html.Br(),
-        html.H4("Выделение трендовой и сезонной составляющих"),
+        html.H4("Выделение компонентов временного ряда"),
         html.Br(),
-        dcc.Graph(id='trend-graph', figure=tsa.fig_trend),
-        dcc.Graph(id='seasonal-graph', figure=tsa.fig_seasonal),
+        dbc.Tabs(
+            [
+                dbc.Tab(dcc.Graph(id='trend-graph', figure=tsa.fig_trend),
+                        tab_id='trend',
+                        label='Трендовая составляющая', labelClassName="text-primary"),
+                dbc.Tab(dcc.Graph(id='seasonal-graph', figure=tsa.fig_seasonal),
+                        tab_id='seasonal',
+                        label='Сезонная составляющая', labelClassName="text-primary"),
+                dbc.Tab(dcc.Graph(id='resid-graph', figure=tsa.fig_resid),
+                        tab_id='resid',
+                        label='Шум', labelClassName="text-primary"),
+                dbc.Tab(dcc.Graph(id='observed-graph', figure=tsa.fig_observed),
+                        tab_id='observed',
+                        label='Уровень', labelClassName="text-primary"),
+            ],
+            id='tabs_decomposition',
+            active_tab='trend',
+        ),
     ]
 )
 result_adf = html.Div(id='adf_div')
@@ -137,7 +154,7 @@ check = html.Div(
                                                     dbc.Col(
                                                         [
                                                             html.Br(),
-                                                            html.H5("Тест Dickey-Fuller"),
+                                                            html.H5("Тест Dickey-Fuller (ADF)"),
                                                             html.Br(),
                                                             dcc.Markdown(children=markdown.adf_test_text),
                                                             html.Br(),
@@ -147,7 +164,7 @@ check = html.Div(
                                                     dbc.Col(
                                                         [
                                                             html.Br(),
-                                                            html.H5("Тест KPSS"),
+                                                            html.H5("Тест Квятковского-Филлипса-Шмидта-Шина (KPSS)"),
                                                             html.Br(),
                                                             dcc.Markdown(children=markdown.kpss_test_text),
                                                             html.Br(),
@@ -172,8 +189,8 @@ construction = html.Div(
         html.Br(),
         html.H4("Конструирование признаков"),
         html.Br(),
-        dash_table.DataTable(data=tsa.df.to_dict('records'),
-                        columns=[{'id':c, 'name':c} for c in tsa.df.columns],
+        dash_table.DataTable(data=tsa.df_resample.to_dict('records'),
+                        columns=[{'id':c, 'name':c} for c in tsa.df_resample.columns],
                         page_size=10,
                         style_header={
                             'backgroundColor': 'rgd(30,30,30)',
@@ -198,8 +215,67 @@ construction = html.Div(
 )
 conclusion_preprocessing = html.Div(
     [
-        html.Br(),
-        dcc.Markdown(children=markdown.conclusion_preprocessing_text)
+        dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                html.Br(),
+                                html.H5('Выполнены следующие действия:'),
+                                dbc.Nav(
+                                    [
+                                        dbc.NavItem(dbc.NavLink("👉 загрузили данные",
+                                                                id="loading_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 преобразовали данные",
+                                                                id="transform_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 выполнили декомпозицию",
+                                                                id="decomposition_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 проверили на монотонность",
+                                                                id="monotony_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 проверили на стационарность",
+                                                                id="stationarity_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 создали новые признаки",
+                                                                id="construction_link",
+                                                                n_clicks=0, className='page-link')),
+                                    ],
+                                    id='nav_conclusion_preprocessing',
+                                    vertical="md",
+                                )
+                            ],
+                            style={'max-width': '30%'}
+                        ),
+                        dbc.Col(
+                            [
+                                html.Br(),
+                                dbc.Card(
+                                    [
+                                        dbc.CardHeader(
+                                            [
+                                                html.Div(id='header_conclusion_preprocessing_div')
+                                            ],
+                                            id='cardheader_conclusion_preprocessing'
+                                        ),
+                                        dbc.CardBody(
+                                            [
+                                                html.Div(id='conclusion_preprocessing_div')
+                                            ],
+                                            id='cardbody_conclusion_preprocessing'
+                                        ),
+                                    ],
+                                )
+                            ],
+                            style={'max-width': '70%'}
+                        ),
+                    ]
+                ),
+            ]
+        ),
     ]
 )
 
@@ -226,133 +302,101 @@ tab2_content = dbc.Card(
 # --------------------------------------------------------EDA-----------------------------------------------------------
 total_trand = html.Div(
     [
-        dbc.Container(
-            [
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            [
-                                dcc.Graph(id='total-trand-graph', figure=tsa.fig_total_trand),
-                            ]
-                        ),
-                        dbc.Col(
-                            [
-                                html.H4("Интерпретация графика"),
-                                html.Br(),
-                                dcc.Markdown(),
-                            ],
-                            style={'max-width': '35%'}
-                        ),
-                    ]
-                )
-            ]
-        ),
+        dcc.Graph(id='total-trand-graph', figure=tsa.fig_total_trand),
     ]
 )
 time_distribution = html.Div(
     [
-        dbc.Container(
-            [
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            [
-                                dcc.Graph(id='distribution-1h-graph', figure=tsa.fig_hour),
-                            ]
-                        ),
-                        dbc.Col(
-                            [
-                                html.H4("Интерпретация графика"),
-                                html.Br(),
-                                dcc.Markdown(),
-                            ],
-                            style={'max-width': '35%'}
-                        ),
-                    ]
-                )
-            ]
-        ),
+        dcc.Graph(id='distribution-1h-graph', figure=tsa.fig_hour),
     ]
 )
 day_distribution = html.Div(
     [
-        dbc.Container(
-            [
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            [
-                                dcc.Graph(id='distribution-weekday-graph', figure=tsa.fig_week),
-                            ]
-                        ),
-                        dbc.Col(
-                            [
-                                html.H4("Интерпретация графика"),
-                                html.Br(),
-                                dcc.Markdown(),
-                            ],
-                            style={'max-width': '35%'}
-                        ),
-                    ]
-                )
-            ]
-        ),
+        dcc.Graph(id='distribution-weekday-graph', figure=tsa.fig_week),
     ]
 )
 month_distribution = html.Div(
     [
-        dbc.Container(
-            [
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            [
-                                dcc.Graph(id='distribution-month-graph', figure=tsa.fig_month),
-                            ]
-                        ),
-                        dbc.Col(
-                            [
-                                html.H4("Интерпретация графика"),
-                                html.Br(),
-                                dcc.Markdown(),
-                            ],
-                            style={'max-width': '35%'}
-                        ),
-                    ]
-                ),
-            ]
-        ),
+        dcc.Graph(id='distribution-month-graph', figure=tsa.fig_month),
     ]
 )
 autocorrelation = html.Div(
     [
-        dbc.Container(
+        dbc.Tabs(
             [
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            [
-                                dcc.Graph(id='autocorr-acf-graph', figure=tsa.fig_acf),
-                            ]
-                        ),
-                        dbc.Col(
-                            [
-                                html.H4("Интерпретация графика"),
-                                html.Br(),
-                                dcc.Markdown(),
-                            ],
-                            style={'max-width': '35%'}
-                        ),
-                    ]
-                ),
-            ]
+                dbc.Tab(dcc.Graph(id='autocorr-acf-graph', figure=tsa.fig_acf),
+                        tab_id='acf',
+                        label='Autocorrelation Function (ACF)', labelClassName="text-primary"),
+                dbc.Tab(dcc.Graph(id='autocorr-pacf-graph', figure=tsa.fig_pacf),
+                        tab_id='pacf',
+                        label='Partial Autocorrelation Function (PACF)', labelClassName="text-primary"),
+            ],
+            id='tabs_autocorrelation',
+            active_tab='acf',
         ),
     ]
 )
 conclusion_analisys = html.Div(
     [
-        html.Br(),
-        dcc.Markdown(children=markdown.conclusion_analis_text)
+        dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                html.Br(),
+                                html.H5('Выполнены следующие действия:'),
+                                dbc.Nav(
+                                    [
+                                        dbc.NavItem(dbc.NavLink("👉 анализ общей тенденции",
+                                                                id="analisys_total_trend_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 анализ в суточном разрезе",
+                                                                id="analisys_hour_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 анализ в недельном разрезе",
+                                                                id="analisys_week_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 анализ в месячном разрезе",
+                                                                id="analisys_month_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 анализ автокорреляции",
+                                                                id="autocorrelation_link",
+                                                                n_clicks=0, className='page-link')),
+
+                                    ],
+                                    id='nav_conclusion_analisys',
+                                    vertical="md",
+                                )
+                            ],
+                            style={'max-width': '30%'}
+                        ),
+                        dbc.Col(
+                            [
+                                html.Br(),
+                                dbc.Card(
+                                    [
+                                        dbc.CardHeader(
+                                            [
+                                                html.Div(id='header_conclusion_analisys_div')
+                                            ],
+                                            id='cardheader_conclusion_analisys'
+                                        ),
+                                        dbc.CardBody(
+                                            [
+                                                html.Div(id='conclusion_analisys_div')
+                                            ],
+                                            id='cardbody_conclusion_analisys'
+                                        ),
+                                    ],
+                                )
+                            ],
+                            style={'max-width': '70%'}
+                        ),
+                    ]
+                ),
+            ]
+        ),
     ]
 )
 
@@ -362,10 +406,10 @@ tab3_content = dbc.Card(
             html.H3("Анализ данных временного ряда (EDA)"),
             dbc.Tabs(
                 [
-                dbc.Tab(total_trand, tab_id='total_trand', label='Общая тенденция'),
-                dbc.Tab(time_distribution, tab_id='time_distribution', label='Распределение по времени'),
-                dbc.Tab(day_distribution, tab_id='day_distribution', label='Распределение по дням недели'),
-                dbc.Tab(month_distribution, tab_id='month_distribution', label='Распределение по месяцам'),
+                dbc.Tab(total_trand, tab_id='total_trand', label='Тенденция'),
+                dbc.Tab(time_distribution, tab_id='time_distribution', label='Анализ по времени'),
+                dbc.Tab(day_distribution, tab_id='day_distribution', label='Анализ по дням недели'),
+                dbc.Tab(month_distribution, tab_id='month_distribution', label='Анализ по месяцам'),
                 dbc.Tab(autocorrelation, tab_id='autocorrelation', label='Автокорреляция'),
                 dbc.Tab(conclusion_analisys, tab_id='conclusion_analisys', label='Вывод'),
                 ],
@@ -416,20 +460,30 @@ train = html.Div(
                         dbc.Col(
                             [
                                 html.Br(),
-                                html.H5('Выбрать модель:'),
+                                html.H5('👇 Выбрать модель:'),
                                 dbc.Nav(
                                     [
-                                        dbc.NavItem(dbc.NavLink("RidgeCV", id="btn_train_ridge", n_clicks=0, className='page-link')),
-                                        dbc.NavItem(dbc.NavLink("LassoCV", id="btn_train_lasso", n_clicks=0, className='page-link')),
-                                        dbc.NavItem(dbc.NavLink("ElasticNetCV", id="btn_train_elastic", n_clicks=0, className='page-link')),
-                                        dbc.NavItem(dbc.NavLink("RandomForestRegressor", id="btn_train_rf", n_clicks=0, className='page-link')),
-                                        dbc.NavItem(dbc.NavLink("LGBMRegressor", id="btn_train_lgbm", n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("RidgeCV ➡", id="btn_train_ridge",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("LassoCV ➡", id="btn_train_lasso",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("ElasticNetCV ➡", id="btn_train_elastic",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("RandomForestRegressor ➡", id="btn_train_rf",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("LGBMRegressor ➡", id="btn_train_lgbm",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
                                     ],
                                     id='nav_train',
                                     vertical="md",
                                 )
                             ],
-                            style={'max-width': '20%'}
+                            style={'max-width': '25%'}
                         ),
                         dbc.Col(
                             [
@@ -451,7 +505,7 @@ train = html.Div(
                                     ],
                                 )
                             ],
-                            style={'max-width': '80%'}
+                            style={'max-width': '75%'}
                         ),
                     ]
                 ),
@@ -468,20 +522,30 @@ params = html.Div(
                         dbc.Col(
                             [
                                 html.Br(),
-                                html.H5('Выбрать модель:'),
+                                html.H5('👇 Выбрать модель:'),
                                 dbc.Nav(
                                     [
-                                        dbc.NavItem(dbc.NavLink("RidgeCV", id="btn_params_ridge", n_clicks=0, className="page-link")),
-                                        dbc.NavItem(dbc.NavLink("LassoCV", id="btn_params_lasso", n_clicks=0, className="page-link")),
-                                        dbc.NavItem(dbc.NavLink("ElasticNetCV", id="btn_params_elastic", n_clicks=0, className="page-link")),
-                                        dbc.NavItem(dbc.NavLink("RandomForestRegressor",id="btn_params_rf", n_clicks=0, className="page-link")),
-                                        dbc.NavItem(dbc.NavLink("LGBMRegressor", id="btn_params_lgbm", n_clicks=0, className="page-link")),
+                                        dbc.NavItem(dbc.NavLink("RidgeCV ➡", id="btn_params_ridge",
+                                                                n_clicks=0, className="page-link",
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("LassoCV ➡", id="btn_params_lasso",
+                                                                n_clicks=0, className="page-link",
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("ElasticNetCV ➡", id="btn_params_elastic",
+                                                                n_clicks=0, className="page-link",
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("RandomForestRegressor ➡",id="btn_params_rf",
+                                                                n_clicks=0, className="page-link",
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("LGBMRegressor ➡", id="btn_params_lgbm",
+                                                                n_clicks=0, className="page-link",
+                                                                class_name='text-primary')),
                                     ],
                                     vertical="md",
                                     id='nav_params'
                                 )
                             ],
-                            style={'max-width': '20%'}
+                            style={'max-width': '25%'}
                         ),
                         dbc.Col(
                             [
@@ -503,7 +567,7 @@ params = html.Div(
                                     ]
                                 )
                             ],
-                            style={'max-width': '80%'}
+                            style={'max-width': '75%'}
                         ),
                     ]
                 ),
@@ -521,8 +585,59 @@ models = html.Div(
 )
 conclusion_train = html.Div(
     [
-        html.Br(),
-        dcc.Markdown(),
+        dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                html.Br(),
+                                html.H5('Выполнены следующие действия:'),
+                                dbc.Nav(
+                                    [
+                                        dbc.NavItem(dbc.NavLink("👉 преобразование данных",
+                                                                id="transform_data_train_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 обучение моделей",
+                                                                id="train_models_link",
+                                                                n_clicks=0, className='page-link')),
+                                        dbc.NavItem(dbc.NavLink("👉 выбор модели и рекомендации",
+                                                                id="model_selection_link",
+                                                                n_clicks=0, className='page-link')),
+
+                                    ],
+                                    id='nav_conclusion_train',
+                                    vertical="md",
+                                )
+                            ],
+                            style={'max-width': '30%'}
+                        ),
+                        dbc.Col(
+                            [
+                                html.Br(),
+                                dbc.Card(
+                                    [
+                                        dbc.CardHeader(
+                                            [
+                                                html.Div(id='header_conclusion_train_div')
+                                            ],
+                                            id='cardheader_conclusion_train'
+                                        ),
+                                        dbc.CardBody(
+                                            [
+                                                html.Div(id='conclusion_train_div')
+                                            ],
+                                            id='cardbody_conclusion_train'
+                                        ),
+                                    ],
+                                )
+                            ],
+                            style={'max-width': '70%'}
+                        ),
+                    ]
+                ),
+            ]
+        ),
     ]
 )
 
@@ -549,10 +664,22 @@ tab4_content = dbc.Card(
 #-----------------------------------------------------------РАЗМЕТКА----------------------------------------------------
 app.layout = html.Div(
     [
+        html.Br(),
         dbc.Container(
+            [
             dbc.Row(
                 [
-                    dbc.Col(logo, style={'max-width': '30%'}, align='start'),
+                    dbc.Col([
+                        html.Div(
+                            [
+                                html.A(logo, href='https://practicum.yandex.ru/'),
+                                html.Br(),
+                                html.Br(),
+                                ThemeSwitchAIO(themes=[dbc.themes.SOLAR, dbc.themes.MORPH],
+                                               icons={"left" :"fa fa-sun", "right" :"fa fa-moon"})
+                                ], style={'text-align': 'center'}
+                            )
+                    ], style={'max-width': '30%'}, align='start'),
                     dbc.Col(
                         [
                             header_1,
@@ -562,26 +689,54 @@ app.layout = html.Div(
                 ],
                 align='center',
                 className="p-5",
-                style={'max-height': '128px'}
+                style={'max-height': '150px'}
             ),
-            style={'max-width': '100%'},
+            ], style={'max-width': '100%'},
         ),
         dbc.Container(
-            html.Div(
-                [
-                    dbc.Tabs(
-                        [
-                            dbc.Tab(tab1_content, label='Задача', tab_id='tab_1', tab_style={"marginLeft": "auto"}),
-                            dbc.Tab(tab2_content, label='Подготовка данных', tab_id='tab_2'),
-                            dbc.Tab(tab3_content, label='Анализ', tab_id='tab_5'),
-                            dbc.Tab(tab4_content, label='Обучение и Тестирование', tab_id='tab_6'),
-                        ],
-                        id='tabs',
-                        active_tab="tab_1",
-                    ),
-                ], style={'max-width': '1300px'},
-            ), style={'max-width': '100%'}, className="p-5",
+            [
+                html.Br(),
+                dbc.Tabs(
+                    [
+                    dbc.Tab(tab1_content, label='Задача', tab_id='tab_1', tab_style={"marginLeft": "auto"}),
+                    dbc.Tab(tab2_content, label='Подготовка данных', tab_id='tab_2'),
+                    dbc.Tab(tab3_content, label='Анализ', tab_id='tab_5'),
+                    dbc.Tab(tab4_content, label='Обучение и Тестирование', tab_id='tab_6'),
+                ],
+                    id='tabs',
+                    active_tab="tab_1",
+                )
+            ], style={'max-width': '100%'},
         ),
+        html.Br(),
+        dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        # dbc.Col(children=[
+                        #     html.Div(
+                        #         [
+                        #             html.Br(),
+                        #             ThemeChangerAIO(aio_id="theme",
+                        #                     radio_props={'value': dbc.themes.SOLAR})
+                        #         ], style={'text-align': 'center'}
+                        #     ),
+                        #     ], style={'max-width': '20%'}
+                        # ),
+                        dbc.Col(children=[
+                            html.Div(
+                                [
+                                    html.Span('© 2022  '),
+                                    html.A('Биденко Э.А.', href='https://github.com/UsilaDobry')
+                                ], style={'text-align': 'center'}
+                            ),
+                            ], style={'max-width': '100%'}
+                        ),
+                    ]
+                ),
+            ], style={'max-width': '100%'}, className="dbc"
+        ),
+        html.Hr()
     ],
 )
 #------------------------------------------------------------ФУНКЦИИ----------------------------------------------------
@@ -644,10 +799,11 @@ def double_btn_clicks(n_clicks_1, n_clicks_2):
      Input("btn_train_rf", "n_clicks"),
      Input("btn_train_lgbm", "n_clicks")]
 )
-def show_clicks_train(n1, n2, n3, n4, n5):
+def show_clicks_train_models(n1, n2, n3, n4, n5):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return ["", ""]
+        return [html.H5('Регуляризованная линейная модель гребневой регрессии (L2 регуляризация)'),
+                dcc.Graph(id='learning_curve_ridge', figure=tsa.train_graphs[0])]
     else:
         button_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if button_id == "btn_train_ridge":
@@ -678,7 +834,8 @@ def show_clicks_train(n1, n2, n3, n4, n5):
 def show_clicks_params(n1, n2, n3, n4, n5):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return ["", ""]
+        return [html.H5('Регуляризованная линейная модель гребневой регрессии (L2 регуляризация)'),\
+               dbc.Table.from_dataframe(tsa.params[0], striped=True, bordered=True, hover=True)]
     else:
         button_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if button_id == "btn_params_ridge":
@@ -697,6 +854,98 @@ def show_clicks_params(n1, n2, n3, n4, n5):
         return [html.H5('Ансамбль `Light GBM` (градиентный бустинг)'),
                 dbc.Table.from_dataframe(tsa.params[4], striped=True, bordered=True, hover=True)]
 
+@app.callback(
+    [Output("header_conclusion_preprocessing_div", "children"),
+     Output("conclusion_preprocessing_div", "children")],
+    [Input("loading_link", "n_clicks"),
+     Input("transform_link", "n_clicks"),
+     Input("decomposition_link", "n_clicks"),
+     Input("monotony_link", "n_clicks"),
+     Input("stationarity_link", "n_clicks"),
+     Input("construction_link", "n_clicks")]
+)
+def show_clicks_conclusion_preprocessing(n1, n2, n3, n4, n5, n6):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return [html.H5('Loading data'),\
+               dcc.Markdown(children=markdown.conclusion_loading)]
+    else:
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if button_id == "loading_link":
+        return [html.H5('Loading data'),\
+               dcc.Markdown(children=markdown.conclusion_loading)]
+    elif button_id == "transform_link":
+        return [html.H5('Data transformation'),
+                dcc.Markdown(children=markdown.conclusion_transform_data)]
+    elif button_id == "decomposition_link":
+        return [html.H5('Data decomposition'),
+                dcc.Markdown(children=markdown.conclusion_decomposition)]
+    elif button_id == "monotony_link":
+        return [html.H5('Checking for monotony'),
+                dcc.Markdown(children=markdown.conclusion_monotony)]
+    elif button_id == "stationarity_link":
+        return [html.H5('Checking for stationarity'),
+                dcc.Markdown(children=markdown.conclusion_stationarity)]
+    else:
+        return [html.H5('Constructing features'),
+                dcc.Markdown(children=markdown.conclusion_construction)]
+
+@app.callback(
+    [Output("header_conclusion_analisys_div", "children"),
+     Output("conclusion_analisys_div", "children")],
+    [Input("analisys_total_trend_link", "n_clicks"),
+     Input("analisys_hour_link", "n_clicks"),
+     Input("analisys_week_link", "n_clicks"),
+     Input("analisys_month_link", "n_clicks"),
+     Input("autocorrelation_link", "n_clicks")]
+)
+def show_clicks_conclusion_analisys(n1, n2, n3, n4, n5):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return [html.H5(''),\
+               dcc.Markdown(children=markdown.conclusion_analisys_total_trend)]
+    else:
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if button_id == "analisys_total_trend_link":
+        return [html.H5(''),\
+               dcc.Markdown(children=markdown.conclusion_analisys_total_trend)]
+    elif button_id == "analisys_hour_link":
+        return [html.H5(''),
+                dcc.Markdown(children=markdown.conclusion_analisys_hour)]
+    elif button_id == "analisys_week_link":
+        return [html.H5(''),
+                dcc.Markdown(children=markdown.conclusion_analisys_week)]
+    elif button_id == "analisys_month_link":
+        return [html.H5(''),
+                dcc.Markdown(children=markdown.conclusion_analisys_month)]
+    else:
+        return [html.H5(''),
+                dcc.Markdown(children=markdown.conclusion_analisys_autocorrelation)]
+
+@app.callback(
+    [Output("header_conclusion_train_div", "children"),
+     Output("conclusion_train_div", "children")],
+    [Input("transform_data_train_link", "n_clicks"),
+     Input("train_models_link", "n_clicks"),
+     Input("model_selection_link", "n_clicks")]
+)
+def show_clicks_conclusion_train(n1, n2, n3):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return [html.H5(''),\
+               dcc.Markdown(children=markdown.conclusion_transform_data_train)]
+    else:
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if button_id == "transform_data_train_link":
+        return [html.H5(''),\
+               dcc.Markdown(children=markdown.conclusion_transform_data_train)]
+    elif button_id == "train_models_link":
+        return [html.H5(''),
+                dcc.Markdown(children=markdown.conclusion_train_models)]
+    else:
+        return [html.H5(''),
+                dcc.Markdown(children=markdown.conclusion_model_selection)]
+
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)

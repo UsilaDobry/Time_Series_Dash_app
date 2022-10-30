@@ -1,8 +1,0 @@
-pandas==1.5.0
-numpy==1.23.3
-plotly==5.10.0
-scikit-learn==1.1.2
-statsmodels==0.13.2
-lightgbm==3.3.2
-dash==2.6.2
-dash-bootstrap-component==1.2.1

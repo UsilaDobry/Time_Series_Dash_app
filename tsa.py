@@ -158,3 +158,14 @@ comparison_table = pd.DataFrame({
 # удалим параметр 'cv' из таблиц параметров
 for i in range(len(params)):
     params[i] = params[i][params[i]['параметр'] != 'cv']
+
+# графики предсказаний
+result_dfs = []
+pred_graphs = []
+for i in range(len(models)):
+    result_dfs.append(pd.DataFrame(pred_test[i], index=y_test.index, columns=['pred_test']).merge(y_test, on='datetime'))
+    fig = px.line(result_dfs[i], x=result_dfs[i].index, y=result_dfs[i].num_orders,
+                  title='Предсказания на тестовой выборке ' + type(models[i]).__name__)
+    fig.add_scatter(x=result_dfs[i].index, y=result_dfs[i].pred_test, mode='lines', name='pred_test')
+    pred_graphs.append(fig)
+

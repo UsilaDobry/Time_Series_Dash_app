@@ -578,9 +578,66 @@ params = html.Div(
 models = html.Div(
     [
         html.Br(),
-        html.H4("Сравнительная таблица обучения моделей"),
+        html.H4("Сравнительная таблица обучения и тестирования моделей"),
         html.Br(),
         dbc.Table.from_dataframe(tsa.comparison_table, striped=True, bordered=True, hover=True)
+    ]
+)
+graphs = html.Div(
+    [
+        dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                html.Br(),
+                                html.H5('👇 Выбрать модель:'),
+                                dbc.Nav(
+                                    [
+                                        dbc.NavItem(dbc.NavLink("RidgeCV ➡", id="btn_graph_ridge",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("LassoCV ➡", id="btn_graph_lasso",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("ElasticNetCV ➡", id="btn_graph_elastic",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("RandomForestRegressor ➡", id="btn_graph_rf",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                        dbc.NavItem(dbc.NavLink("LGBMRegressor ➡", id="btn_graph_lgbm",
+                                                                n_clicks=0, className='page-link',
+                                                                class_name='text-primary')),
+                                    ],
+                                    id='nav_graphs',
+                                    vertical="md",
+                                )
+                            ],
+                            style={'max-width': '25%'}
+                        ),
+                        dbc.Col(
+                            [
+                                html.Br(),
+                                dbc.Card(
+                                    [
+
+                                        dbc.CardBody(
+                                            [
+                                                html.Div(id='graph_pred_div')
+                                            ],
+                                            id='cardbody_graphs'
+                                        ),
+                                    ],
+                                )
+                            ],
+                            style={'max-width': '75%'}
+                        ),
+                    ]
+                ),
+            ]
+        ),
     ]
 )
 conclusion_train = html.Div(
@@ -651,6 +708,7 @@ tab4_content = dbc.Card(
                     dbc.Tab(train, tab_id='train', label='Обучение'),
                     dbc.Tab(params, tab_id='params', label='Параметры моделей'),
                     dbc.Tab(models, tab_id='models', label='Сравнение моделей'),
+                    dbc.Tab(graphs, tab_id='train_graphs', label='Графики предсказаний'),
                     dbc.Tab(conclusion_train, tab_id='conclusion_train', label='Вывод'),
                 ],
                 id='tabs_train',
@@ -853,6 +911,40 @@ def show_clicks_params(n1, n2, n3, n4, n5):
     else:
         return [html.H5('Ансамбль `Light GBM` (градиентный бустинг)'),
                 dbc.Table.from_dataframe(tsa.params[4], striped=True, bordered=True, hover=True)]
+
+@app.callback(
+    [Output("graph_pred_div", "children")],
+    [Input("btn_graph_ridge", "n_clicks"),
+     Input("btn_graph_lasso", "n_clicks"),
+     Input("btn_graph_elastic", "n_clicks"),
+     Input("btn_graph_rf", "n_clicks"),
+     Input("btn_graph_lgbm", "n_clicks")]
+)
+def show_clicks_graphs_pred(n1, n2, n3, n4, n5):
+    '''
+    Функция реализует обратный вызов боковой панели "Графики предсказаний"
+    :param n1: ссылка на модуль 1
+    :param n2: ссылка на модель 2
+    :param n3: ссылка на модель 3
+    :param n4: ссылка на модель 4
+    :param n5: ссылка на модель 5
+    :return: возвращает график в компоненте dcc.Graph
+    '''
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return [dcc.Graph(id='graph_pred_ridge', figure=tsa.pred_graphs[0])]
+    else:
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if button_id == "btn_graph_ridge":
+        return [dcc.Graph(id='graph_pred_ridge', figure=tsa.pred_graphs[0])]
+    elif button_id == "btn_graph_lasso":
+        return [dcc.Graph(id='graph_pred_lasso', figure=tsa.pred_graphs[1])]
+    elif button_id == "btn_graph_elastic":
+        return [dcc.Graph(id='graph_pred_elastic', figure=tsa.pred_graphs[2])]
+    elif button_id == "btn_graph_rf":
+        return [dcc.Graph(id='graph_pred_rf', figure=tsa.pred_graphs[3])]
+    else:
+        return [dcc.Graph(id='graph_pred_lgbm', figure=tsa.pred_graphs[4])]
 
 @app.callback(
     [Output("header_conclusion_preprocessing_div", "children"),

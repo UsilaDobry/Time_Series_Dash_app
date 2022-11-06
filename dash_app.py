@@ -17,8 +17,7 @@ app.css.config.serve_locally = True
 
 
 #-------------------------------------------------------HEADER----------------------------------------------------------
-logo = html.Img(src=app.get_asset_url('./Logo_Yandex/ya_praktikum_2.jpg'), style={'width': "200px", 'height': "100x"},
-                className='inline-image')
+logo = html.Img(src=app.get_asset_url("ya_praktikum.jpg"), style={"width": "200px", 'height': "100x"})
 header_1 = html.H1(children="DashBoard Machine Learning", style={'text-transform': "uppercase"})
 header_2 = html.H3(children="Анализ временных рядов", style={'text-transform': "uppercase"})
 

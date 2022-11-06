@@ -11,7 +11,7 @@
 
 | Тема `BOOTSTRAP: SOLAR` | Тема `BOOTSTRAP: MURPH` |
 |------------------|----------------------|
-| [](https://github.com/UsilaDobry/Time_Series_Dash_app/blob/master/assets/preview_tsa_dash_1_solar.png) | [](https://github.com/UsilaDobry/Time_Series_Dash_app/blob/master/assets/preview_tsa_dash_1_murph.png) |
+| [image](https://github.com/UsilaDobry/Time_Series_Dash_app/blob/master/assets/preview_tsa_dash_1_solar.png) | [image](https://github.com/UsilaDobry/Time_Series_Dash_app/blob/master/assets/preview_tsa_dash_1_murph.png) |
 
 
 

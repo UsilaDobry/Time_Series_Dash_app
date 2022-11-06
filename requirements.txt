@@ -33,5 +33,7 @@ threadpoolctl==3.1.0
 pyparsing==3.0.9
 statsmodels==0.13.2
 packaging==21.3
+dash-bootstrap-components==1.2.1
+dash-bootstrap-templates==1.0.7
 Pillow==9.3.0
 lightgbm==3.3.3

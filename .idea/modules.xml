@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../Dash_tutorial/.idea/Dash_tutorial.iml" filepath="$PROJECT_DIR$/../Dash_tutorial/.idea/Dash_tutorial.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Time_Series_Dash_app.iml" filepath="$PROJECT_DIR$/.idea/Time_Series_Dash_app.iml" />
     </modules>
   </component>

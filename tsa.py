@@ -130,13 +130,13 @@ rmse_test = []
 train_graphs = []
 params = []
 
-for m in models:
+for model in models:
     # обучение
-    m.fit(X_train_std, y_train)
+    model.fit(X_train_std, y_train)
     # прогноз на тренировочной выборке
-    prediction_train = m.predict(X_train_std)
+    prediction_train = model.predict(X_train_std)
     # прогноз на тестовой выборке
-    prediction_test = m.predict(X_test_std)
+    prediction_test = model.predict(X_test_std)
     # сохранение результатов прогнозирования
     pred_train.append(prediction_train)
     pred_test.append(prediction_test)
@@ -144,10 +144,10 @@ for m in models:
     rmse_train.append(round(np.sqrt(mean_squared_error(y_train, prediction_train))))
     rmse_test.append(round(np.sqrt(mean_squared_error(y_test, prediction_test))))
     # параметры модели
-    params.append(pd.DataFrame.from_dict(m.get_params(), orient='index').reset_index().rename \
+    params.append(pd.DataFrame.from_dict(model.get_params(), orient='index').reset_index().rename \
                         (columns={'index': 'параметр', 0: 'значение'}))
     # график обучения модели
-    train_graphs.append(functions.plot_learning_curves(m, X_train_std, y_train, cv=tscv))
+    train_graphs.append(functions.plot_learning_curves(model, X_train_std, y_train, cv=tscv))
 
 # сравнительная таблица
 comparison_table = pd.DataFrame({

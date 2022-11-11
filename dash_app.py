@@ -1,6 +1,7 @@
 # Local resources
 import tsa
 import markdown
+import functions
 # dash components
 import dash
 import dash_bootstrap_components as dbc
@@ -8,9 +9,11 @@ from dash import html, dcc, Dash, dash_table, State
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 from dash_bootstrap_templates import ThemeChangerAIO, ThemeSwitchAIO
+from plotly.subplots import make_subplots
 
 
-app = Dash(name=__name__, external_stylesheets=[dbc.themes.SOLAR])
+dbc_css = ("https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates@V1.0.2/dbc.min.css")
+app = Dash(name=__name__, external_stylesheets=[dbc.themes.SOLAR, dbc_css])
 server = app.server
 app.scripts.config.serve_locally = True
 app.css.config.serve_locally = True
@@ -459,28 +462,15 @@ train = html.Div(
                         dbc.Col(
                             [
                                 html.Br(),
-                                html.H5('👇 Выбрать модель:'),
-                                dbc.Nav(
-                                    [
-                                        dbc.NavItem(dbc.NavLink("RidgeCV ➡", id="btn_train_ridge",
-                                                                n_clicks=0, className='page-link',
-                                                                class_name='text-primary')),
-                                        dbc.NavItem(dbc.NavLink("LassoCV ➡", id="btn_train_lasso",
-                                                                n_clicks=0, className='page-link',
-                                                                class_name='text-primary')),
-                                        dbc.NavItem(dbc.NavLink("ElasticNetCV ➡", id="btn_train_elastic",
-                                                                n_clicks=0, className='page-link',
-                                                                class_name='text-primary')),
-                                        dbc.NavItem(dbc.NavLink("RandomForestRegressor ➡", id="btn_train_rf",
-                                                                n_clicks=0, className='page-link',
-                                                                class_name='text-primary')),
-                                        dbc.NavItem(dbc.NavLink("LGBMRegressor ➡", id="btn_train_lgbm",
-                                                                n_clicks=0, className='page-link',
-                                                                class_name='text-primary')),
-                                    ],
-                                    id='nav_train',
-                                    vertical="md",
-                                )
+                                dbc.Label('👇 Выбрать модель или несколько:'),
+                                dcc.Dropdown(id='models_train_dropdown',
+                                            placeholder='Select one or more models',
+                                            multi=True,
+                                            clearable=True,
+                                            className='dbc',
+                                            options=[{'label': country, 'value': value}
+                                                    for country, value in [('RidgeCV', 0), ('LassoCV', 1), ('ElasticNetCV', 2),
+                                                                    ('RandomForestRegressor', 3), ('LGBMRegressor', 4)]]),
                             ],
                             style={'max-width': '25%'}
                         ),
@@ -489,17 +479,13 @@ train = html.Div(
                                 html.Br(),
                                 dbc.Card(
                                     [
-                                        dbc.CardHeader(
-                                            [
-                                                html.Div(id='header_learning_curve_div')
+                                        dbc.CardBody(children=[
+                                            html.Div(id='train_graph_0'),
+                                            html.Div(id='train_graph_1'),
+                                            html.Div(id='train_graph_2'),
+                                            html.Div(id='train_graph_3'),
+                                            html.Div(id='train_graph_4'),
                                             ],
-                                            id='cardheader_train'
-                                        ),
-                                        dbc.CardBody(
-                                            [
-                                                html.Div(id='learning_curve_div')
-                                            ],
-                                            id='cardbody_train'
                                         ),
                                     ],
                                 )
@@ -848,37 +834,22 @@ def double_btn_clicks(n_clicks_1, n_clicks_2):
         raise PreventUpdate
 
 @app.callback(
-    [Output("header_learning_curve_div", "children"),
-    Output("learning_curve_div", "children")],
-    [Input("btn_train_ridge", "n_clicks"),
-     Input("btn_train_lasso", "n_clicks"),
-     Input("btn_train_elastic", "n_clicks"),
-     Input("btn_train_rf", "n_clicks"),
-     Input("btn_train_lgbm", "n_clicks")]
+    [Output("train_graph_0", "children"),
+     Output("train_graph_1", "children"),
+     Output("train_graph_2", "children"),
+     Output("train_graph_3", "children"),
+     Output("train_graph_4", "children")],
+    [Input("models_train_dropdown", "value")]
 )
-def show_clicks_train_models(n1, n2, n3, n4, n5):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return [html.H5('Регуляризованная линейная модель гребневой регрессии (L2 регуляризация)'),
-                dcc.Graph(id='learning_curve_ridge', figure=tsa.train_graphs[0])]
-    else:
-        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    if button_id == "btn_train_ridge":
-        return [html.H5('Регуляризованная линейная модель гребневой регрессии (L2 регуляризация)'),
-                dcc.Graph(id='learning_curve_ridge', figure=tsa.train_graphs[0])]
-    elif button_id == "btn_train_lasso":
-        return [html.H5('Регуляризованная линейная модель лассо регрессии (L1 регуляризация)'),
-                dcc.Graph(id='learning_curve_lasso', figure=tsa.train_graphs[1])]
-    elif button_id == "btn_train_elastic":
-        return [html.H5('Регуляризованная линейная модель регрессии эластичная сетка (L1, L2 регуляризации)'),
-                dcc.Graph(id='learning_curve_elastic', figure=tsa.train_graphs[2])]
-    elif button_id == "btn_train_rf":
-        return [html.H5('Ансамбль `Random Forest` (мажоритарное голосование)'),
-                dcc.Graph(id='learning_curve_rf', figure=tsa.train_graphs[3])]
-    else:
-        return [html.H5('Ансамбль `Light GBM` (градиентный бустинг)'),
-                dcc.Graph(id='learning_curve_lgbm', figure=tsa.train_graphs[4])]
+def show_clicks_train_models(models):
+    if not models:
+        return [dcc.Graph(figure=functions.make_empty_fig(), style={'height':'300px'}), '', '', '', '']
 
+    rez = ['', '', '', '', '']
+    for i in models:
+        rez[i] = dcc.Graph(figure=tsa.train_graphs[i], style={'height':'300px'})
+
+    return rez
 @app.callback(
     [Output("header_params_div", "children"),
      Output("params_div", "children")],

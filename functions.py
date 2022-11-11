@@ -5,6 +5,11 @@ from statsmodels.tsa.stattools import adfuller, kpss, acf, pacf
 from sklearn.model_selection import learning_curve
 from sklearn.metrics import make_scorer, mean_squared_error
 
+
+def make_empty_fig():
+    fig = go.Figure()
+    fig.layout.template = 'plotly_dark'
+    return fig
 # анализ стационарности
 # Dickey-Fuller Test
 def adf_test(timeseries):
@@ -135,7 +140,7 @@ def plot_learning_curves(estimator, X, y, cv):
     )
 
     fig.update_layout(
-        title="График кривой обучения модели",
+        title="Кривая обучения " + type(estimator).__name__,
         xaxis_title="Количество обучающих примеров",
         yaxis_title="Mean_squared_error",
     )
